@@ -1,8 +1,9 @@
+#include "pch.h"
 #include "Shader_Utils.h"
 
 
 /* Used to read the shader files */
-std::string shader_utils::readShaderFile(const char* filePath) 
+std::string ShaderUtils::readShaderFile(const char* filePath)
 {
 
 	std::string content;
@@ -27,7 +28,7 @@ std::string shader_utils::readShaderFile(const char* filePath)
 }
 
 /* Compile a shader passed by params */
-unsigned int shader_utils::shaderCompile(unsigned int shaderType, const std::string& source)
+unsigned int ShaderUtils::shaderCompile(unsigned int shaderType, const std::string& source)
 {
 	unsigned int shader_id = glCreateShader(shaderType);
 	const char* src = source.c_str();
@@ -38,12 +39,12 @@ unsigned int shader_utils::shaderCompile(unsigned int shaderType, const std::str
 }
 
 /* Create fragment and vertex shaders, passed by params */
-unsigned int shader_utils::createShaders(const std::string& vertexShader, const std::string& fragmentShader)
+unsigned int ShaderUtils::createShaders(const std::string& vertexShader, const std::string& fragmentShader)
 {
 	unsigned int program = glCreateProgram();
 
-	unsigned int compiled_vertShader = shader_utils::shaderCompile(GL_VERTEX_SHADER,   vertexShader  );
-	unsigned int compiled_fragShader = shader_utils::shaderCompile(GL_FRAGMENT_SHADER, fragmentShader);
+	unsigned int compiled_vertShader = shaderCompile(GL_VERTEX_SHADER, vertexShader);
+	unsigned int compiled_fragShader = shaderCompile(GL_FRAGMENT_SHADER, fragmentShader);
 
 
 	glAttachShader(program, compiled_vertShader);

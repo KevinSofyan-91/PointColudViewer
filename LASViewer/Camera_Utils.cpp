@@ -1,14 +1,17 @@
+#include "pch.h"
 #include "Camera_Utils.h"
 
-
-
 /* Compute the model view matrix projection Matrix */
-void camera_utils::computeInitialMVP_Matrix(glm::vec3 cameraPosition, glm::vec3 cameraTarget, glm::vec3 cameraUp)
+glm::mat4 CameraUtils::computeInitialMVP_Matrix(glm::vec3 cameraPosition, glm::vec3 cameraTarget, glm::vec3 cameraUp, float aspect)
 {
-	Projection = glm::perspective(glm::radians(45.f), (float) VIEWPORT_WIDTH / VIEWPORT_HEIGHT, 0.1f, 10000.f);
+	glm::mat4 Projection;
+	glm::mat4 Model;
+	glm::mat4 View;
+	glm::mat4 mvp;
+
+	Projection = glm::perspective(glm::radians(45.f), aspect, 0.1f, 10000.f);
 
 	Model = glm::mat4(1.0f);
-	//Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(0.0, 1.0f, 0.0f));
 
 	View = glm::lookAt(
 		cameraPosition,
@@ -17,10 +20,11 @@ void camera_utils::computeInitialMVP_Matrix(glm::vec3 cameraPosition, glm::vec3 
 	);
 
 	mvp = Projection * View * Model;
+	return mvp;
 }
 
 
-glm::vec3 camera_utils::getInitalCameraPosition(LASheader& header) {
+glm::vec3 CameraUtils::getInitalCameraPosition(LASheader& header) {
 	float distanceFactor = 2.0f;
 
 	float xCenter = (header.min_x + header.max_x) / 2.0f;
@@ -37,9 +41,9 @@ glm::vec3 camera_utils::getInitalCameraPosition(LASheader& header) {
 	return cameraPosition;
 }
 
-glm::vec3 camera_utils::getInitalCameraTarget(LASheader& header) {
+glm::vec3 CameraUtils::getInitalCameraTarget(LASheader& header) {
 	glm::vec3 target;
-	
+
 	target.x = (header.min_x + header.max_x) / 2.0f;
 	target.y = (header.min_y + header.max_y) / 2.0f;
 	target.z = (header.min_z + header.max_z) / 2.0f;

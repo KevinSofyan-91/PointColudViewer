@@ -1,16 +1,16 @@
 #pragma once
-#include <GL\glew.h>
 #include <string>
 #include <iostream>
 #include <fstream>
 
+#include <GL\glew.h>
 
-
-namespace shader_utils
+class ShaderUtils
 {
-	extern unsigned int shader;
-
+	unsigned int shader;
+public:
 	std::string readShaderFile(const char*);
-	unsigned int shaderCompile(unsigned int, const std::string& );
+	unsigned int shaderCompile(unsigned int, const std::string&);
 	unsigned int createShaders(const std::string&, const std::string&);
-}
+};
+
