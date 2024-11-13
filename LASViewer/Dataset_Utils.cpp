@@ -5,12 +5,15 @@
 using namespace std;
 
 /* Reads the point cloud dataset and saves to a vector struct */
-std::vector <Point_Infos> DatasetUtils::readPointsInfofromLas(LASreader*& lasreader)
+std::vector <Point_Infos> DatasetUtils::readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback)
 {
 	std::vector <Point_Infos> pointsVector;
 	float x, y, z, intensity, red, green, blue;
 
 	LASheader header = lasreader->header;
+
+	size_t totalPoints = header.number_of_point_records;
+	size_t batch = 0, batchIndex = 0;
 
 	// Read and process the LAS file
 	while (lasreader->read_point()) {
@@ -23,6 +26,13 @@ std::vector <Point_Infos> DatasetUtils::readPointsInfofromLas(LASreader*& lasrea
 		red = point.rgb[0];
 		green = point.rgb[1];
 		blue = point.rgb[2];
+
+		batchIndex++;
+		if (batchIndex > BATCH_SIZE) {
+			batch++;
+			batchIndex = 0;
+			batchCallback(static_cast<int>(100.0 / totalPoints * batch * BATCH_SIZE));
+		}
 
 		pointsVector.push_back(Point_Infos{ x, y, z, intensity, red, green, blue });
 	}

@@ -44,7 +44,6 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
-
 // CLASViewerDlg dialog
 CLASViewerDlg::CLASViewerDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_LASVIEWER_DIALOG, pParent)
@@ -67,6 +66,8 @@ BEGIN_MESSAGE_MAP(CLASViewerDlg, CDialogEx)
 	ON_WM_LBUTTONUP()
 	ON_WM_MOUSEWHEEL()
 	ON_COMMAND(ID_FILE_OPEN, &CLASViewerDlg::OnFileOpen)
+	ON_MESSAGE(WM_LOADING_COMPLETED, &CLASViewerDlg::OnLoadingCompleted)
+	ON_MESSAGE(WM_LOADING_UPDATED, &CLASViewerDlg::OnProgressUpdated)
 END_MESSAGE_MAP()
 
 void CLASViewerDlg::OnFileOpen()
@@ -82,10 +83,25 @@ void CLASViewerDlg::OnFileOpen()
 	{
 		// Get the selected file path
 		CString selectedFilePath = fileDialog.GetPathName();
-		m_Render->LoadLasPoints(selectedFilePath);
+		LoadLasPointsInBackground(selectedFilePath);
 	}
 }
 
+// Assuming you have a method to process the points (non-blocking)
+void CLASViewerDlg::LoadLasPointsInBackground(const CString& filePath)
+{
+	if (m_Render) {
+		m_wndProgress.SetPos(0);           // Initialize progress bar to 0%
+		// Start the background thread to load points
+		std::thread loadThread([this, filePath]() {
+			m_Render->LoadLasPoints(filePath);
+			// Post message to the dialog when loading is complete
+			PostMessage(WM_LOADING_COMPLETED);
+		});
+
+		loadThread.detach();  // Detach the thread so it runs independently
+	}
+}
 
 // CLASViewerDlg message handlers
 
@@ -116,6 +132,20 @@ BOOL CLASViewerDlg::OnInitDialog()
 	m_Render = new OpenGLRenderer(m_OpenGLControl.GetSafeHwnd(), clientRect.Width(), clientRect.Height());
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
+}
+
+LRESULT CLASViewerDlg::OnLoadingCompleted(WPARAM wParam, LPARAM lParam) {
+	// Handle completion of the loading task (update UI, etc.)
+	m_wndProgress.SetPos(100);
+	if (m_Render) m_Render->SetupRender();
+	return 0;
+}
+
+// Message handler for the custom WM_PROGRESS_UPDATED message
+LRESULT CLASViewerDlg::OnProgressUpdated(WPARAM wParam, LPARAM lParam) {
+	int progress = (int)wParam;  // Progress is passed as WPARAM
+	m_wndProgress.SetPos(progress);  // Update the progress bar with the new progress value
+	return 0;
 }
 
 void CLASViewerDlg::OnSysCommand(UINT nID, LPARAM lParam)

@@ -3,8 +3,12 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include <iostream>
+#include <functional>
 
 #include "lasreader.hpp"
+
+#define BATCH_SIZE 1000
 
 struct Point_Infos
 {
@@ -31,7 +35,7 @@ struct Point_Infos
 class DatasetUtils
 {
 public:
-	std::vector <Point_Infos> readPointsInfofromLas(LASreader*& lasreader);
+	std::vector <Point_Infos> readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback);
 	std::vector <float> getCoordinates(std::vector <Point_Infos>);
 	std::vector <float> getPointsColor(std::vector <Point_Infos>);
 };

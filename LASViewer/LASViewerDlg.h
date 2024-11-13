@@ -1,12 +1,18 @@
 #pragma once
 #include "OpenGLRenderer.h"
 
+#include <iostream>
+#include <thread>
+#include <atomic>
+#include <mutex>
+
 // CLASViewerDlg dialog
 class CLASViewerDlg : public CDialogEx
 {
 // Construction
 public:
 	CLASViewerDlg(CWnd* pParent = nullptr);	// standard constructor
+	void LoadLasPointsInBackground(const CString& filePath);
 
 // Dialog Data
 #ifdef AFX_DESIGN_TIME
@@ -15,7 +21,6 @@ public:
 
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
-
 
 // Implementation
 protected:
@@ -35,6 +40,9 @@ protected:
     afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
     afx_msg void OnMouseMove(UINT nFlags, CPoint point);
     afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg LRESULT OnLoadingCompleted(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnProgressUpdated(WPARAM wParam, LPARAM lParam);
+
     // Menu command handlers
     afx_msg void OnFileOpen();
 

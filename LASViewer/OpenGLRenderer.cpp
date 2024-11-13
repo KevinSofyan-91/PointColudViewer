@@ -4,7 +4,7 @@
 OpenGLRenderer::OpenGLRenderer(HWND hWnd, int width, int height)
     : m_hWnd(hWnd), width(width), height(height), cameraPosition(0.0f, 0.0f, 0.0f),
     cameraTarget(0.0f, 0.0f, 0.0f), cameraUp(0.0f, 1.0f, 0.0f), yaw(-90.0f), pitch(0.0f),
-    radius(500.0f), sensitivity(1.0f), zoomSpeed(10.0f), currentLOD(1),
+    radius(500.0f), sensitivity(1.0f), zoomSpeed(10.0f), currentLOD(1), prevLOD(1),
     lastX(static_cast<float>(width) / 2.0f), lastY(static_cast<float>(height) / 2.0f),
     firstMouse(true), isLeftMouseButtonDown(false)
 {
@@ -29,6 +29,7 @@ void OpenGLRenderer::initalizeValues() {
     sensitivity = 1.0f;
     zoomSpeed = 10.0f;
     currentLOD = 1;
+    prevLOD = 1;
 
     firstMouse = true;
     isLeftMouseButtonDown = false;
@@ -97,12 +98,9 @@ void OpenGLRenderer::LoadShaders()
     glUseProgram(shaderProgram);
 }
 
+
 void OpenGLRenderer::LoadLasPoints(const CString& filePath)
 {
-    //Clear all data for new render
-    CleanupBuffers();
-    initalizeValues();
-
     LASreadOpener lasOpener;
 
     CStringA pathStr(filePath);
@@ -117,13 +115,32 @@ void OpenGLRenderer::LoadLasPoints(const CString& filePath)
     }
 
     // Process the point cloud data...
-    // Replace with actual LAS data extraction and conversion logic
-    std::vector<Point_Infos> pointsInfo = dataUtils.readPointsInfofromLas(lasreader);
+    pointsInfo = dataUtils.readPointsInfofromLas(lasreader, [this](int progress) {
+        PostUpdateMessageToUIThread(progress);
+        return 0;  // Make sure to return an int as expected by the callback signature
+    });
     vertex_position_data = dataUtils.getCoordinates(pointsInfo);
     vertex_color_data = dataUtils.getPointsColor(pointsInfo);
 
     cameraPosition = cameraUtils.getInitalCameraPosition(lasreader->header);
     cameraTarget = cameraUtils.getInitalCameraTarget(lasreader->header);
+}
+
+// Function to send points to the main thread via PostMessage
+void OpenGLRenderer::PostUpdateMessageToUIThread(int progress) {
+    HWND parentHwnd = GetParent(m_hWnd);  // Get the parent HWND
+
+    if (parentHwnd != NULL) {
+        // Post a message to the parent window (e.g., WM_USER + 1 as a custom message)
+        PostMessage(parentHwnd, WM_LOADING_UPDATED, (WPARAM)progress, (LPARAM)0);
+    }
+}
+
+
+void OpenGLRenderer::SetupRender() {
+    //Clear all data for new render
+    CleanupBuffers();
+    initalizeValues();
 
     // Load shaders
     LoadShaders();
@@ -147,8 +164,6 @@ void OpenGLRenderer::LoadLasPoints(const CString& filePath)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    glEnable(GL_DEPTH_TEST);
-
     UpdateCameraDirection();
 }
 
@@ -160,11 +175,48 @@ void OpenGLRenderer::RenderScene()
     glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 
     glBindVertexArray(vao);
-    for (size_t i = 0; i < vertex_position_data.size() / 3; i += currentLOD) {
-        glDrawArrays(GL_POINTS, static_cast<GLint>(i), currentLOD);
+
+    if (currentLOD != prevLOD) {
+        size_t step = currentLOD;
+        lodVertices.clear();
+        lodColors.clear();
+
+        for (size_t i = 0; i < vertex_position_data.size(); i += step * 3) {
+            lodVertices.push_back(vertex_position_data[i]);
+            lodVertices.push_back(vertex_position_data[i + 1]);
+            lodVertices.push_back(vertex_position_data[i + 2]);
+
+            // Add color data (assuming color is in a separate array, like `vertex_color_data`)
+            lodColors.push_back(vertex_color_data[i]); // R
+            lodColors.push_back(vertex_color_data[i + 1]); // G
+            lodColors.push_back(vertex_color_data[i + 2]); // B
+        }
     }
+
+    // Set up position buffer
+    glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
+    GLfloat* positionData = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    memcpy(positionData, lodVertices.data(), lodVertices.size() * sizeof(GLfloat));
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
+    glEnableVertexAttribArray(0);
+
+    // Set up color buffer
+    glBindBuffer(GL_ARRAY_BUFFER, vboColors); 
+    GLfloat* colorData = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    memcpy(colorData, lodColors.data(), lodColors.size() * sizeof(GLfloat));
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
+    glEnableVertexAttribArray(1);
+
+    // Draw the current LOD
+    glDrawArrays(GL_POINTS, 0, lodVertices.size() / 3);
+
+    // Unbind VAO
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    // Swap buffers
     SwapBuffers(m_hDC);
 }
 
@@ -184,6 +236,8 @@ void OpenGLRenderer::UpdateCameraDirection()
 
 void OpenGLRenderer::UpdateLod()
 {
+    prevLOD = currentLOD;
+
     cameraDistance = glm::length(cameraPosition);
     if (cameraDistance < 100.0f)
         currentLOD = 1;

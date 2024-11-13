@@ -15,6 +15,9 @@
 #define VERTEX_SHADER_FILEPATH		".\\shaders\\vertex.shader"
 #define FRAGMENT_SHADER_FILEPATH	".\\shaders\\fragment.shader"
 
+#define WM_LOADING_COMPLETED (WM_USER + 1) 
+#define WM_LOADING_UPDATED (WM_USER + 2) 
+
 class OpenGLRenderer
 {
 public:
@@ -22,6 +25,7 @@ public:
     ~OpenGLRenderer();
 
     void LoadLasPoints(const CString& filePath);
+    void SetupRender();
     void RenderScene();
     void UpdateCameraDirection();
     void UpdateLod();
@@ -37,15 +41,25 @@ private:
     void LoadShaders();
     void CleanupBuffers();
     void initalizeValues();
+    void PostUpdateMessageToUIThread(int progress);
+
 
     HWND m_hWnd;
     HDC m_hDC;
     HGLRC m_hRC;
 
+    std::vector<Point_Infos> pointsInfo;
+
     //Utils Variable
     DatasetUtils dataUtils;
     CameraUtils cameraUtils;
     ShaderUtils shaderUtils;
+
+    //For LOD
+    std::vector<GLfloat> lodVertices;
+    std::vector<GLfloat> lodColors;
+    int currentLOD;
+    int prevLOD;
 
     GLuint vao, vboPositions, vboColors, shaderProgram;
     GLint MatrixID;
@@ -61,7 +75,6 @@ private:
     float sensitivity;
     float zoomSpeed;
     float cameraDistance;
-    int currentLOD;
 
     float lastX, lastY;
     bool firstMouse;
