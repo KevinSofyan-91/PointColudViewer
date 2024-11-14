@@ -103,8 +103,9 @@ void OpenGLRenderer::LoadLasPoints(const CString& filePath)
 {
     LASreadOpener lasOpener;
 
-    CStringA pathStr(filePath);
-    char* path = pathStr.GetBuffer();
+    int pathLength = WideCharToMultiByte(CP_UTF8, 0, filePath, -1, nullptr, 0, nullptr, nullptr);
+    char* path = new char[pathLength];
+    WideCharToMultiByte(CP_UTF8, 0, filePath, -1, path, pathLength, nullptr, nullptr);
 
     lasOpener.set_file_name(path);
     LASreader* lasreader = lasOpener.open();
@@ -176,6 +177,7 @@ void OpenGLRenderer::RenderScene()
 
     glBindVertexArray(vao);
 
+    // Ensure positions and colors are uploaded to the GPU once (only on data changes or first load)
     if (currentLOD != prevLOD) {
         size_t step = currentLOD;
         lodVertices.clear();
@@ -186,28 +188,27 @@ void OpenGLRenderer::RenderScene()
             lodVertices.push_back(vertex_position_data[i + 1]);
             lodVertices.push_back(vertex_position_data[i + 2]);
 
-            // Add color data (assuming color is in a separate array, like `vertex_color_data`)
+            // Add color data
             lodColors.push_back(vertex_color_data[i]); // R
             lodColors.push_back(vertex_color_data[i + 1]); // G
             lodColors.push_back(vertex_color_data[i + 2]); // B
         }
+
+        // Set up the position buffer (upload data only when LOD changes)
+        glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
+        glBufferData(GL_ARRAY_BUFFER, lodVertices.size() * sizeof(GLfloat), lodVertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
+        glEnableVertexAttribArray(0);
+
+        // Set up the color buffer (upload data only when LOD changes)
+        glBindBuffer(GL_ARRAY_BUFFER, vboColors);
+        glBufferData(GL_ARRAY_BUFFER, lodColors.size() * sizeof(GLfloat), lodColors.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
+        glEnableVertexAttribArray(1);
+
+        // Update the previous LOD
+        prevLOD = currentLOD;
     }
-
-    // Set up position buffer
-    glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-    GLfloat* positionData = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    memcpy(positionData, lodVertices.data(), lodVertices.size() * sizeof(GLfloat));
-    glUnmapBuffer(GL_ARRAY_BUFFER);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
-    glEnableVertexAttribArray(0);
-
-    // Set up color buffer
-    glBindBuffer(GL_ARRAY_BUFFER, vboColors); 
-    GLfloat* colorData = (GLfloat*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-    memcpy(colorData, lodColors.data(), lodColors.size() * sizeof(GLfloat));
-    glUnmapBuffer(GL_ARRAY_BUFFER);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
-    glEnableVertexAttribArray(1);
 
     // Draw the current LOD
     glDrawArrays(GL_POINTS, 0, lodVertices.size() / 3);
@@ -239,6 +240,7 @@ void OpenGLRenderer::UpdateLod()
     prevLOD = currentLOD;
 
     cameraDistance = glm::length(cameraPosition);
+
     if (cameraDistance < 100.0f)
         currentLOD = 1;
     else if (cameraDistance < 500.0f)

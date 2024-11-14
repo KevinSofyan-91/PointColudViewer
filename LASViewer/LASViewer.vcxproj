@@ -194,6 +194,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="LASViewer.h" />
     <ClInclude Include="LASViewerDlg.h" />
+    <ClInclude Include="LoadingDialog.h" />
     <ClInclude Include="OpenGLRenderer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
@@ -205,6 +206,7 @@
     <ClCompile Include="Dataset_Utils.cpp" />
     <ClCompile Include="LASViewer.cpp" />
     <ClCompile Include="LASViewerDlg.cpp" />
+    <ClCompile Include="LoadingDialog.cpp" />
     <ClCompile Include="OpenGLRenderer.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

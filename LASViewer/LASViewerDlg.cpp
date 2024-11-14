@@ -49,6 +49,9 @@ CLASViewerDlg::CLASViewerDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_LASVIEWER_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);	
+	m_LoadingDlg = new LoadingDialog(this);
+	m_LoadingDlg->Create(IDD_LOADING_DIALOG, this);
+	m_LoadingDlg->CenterWindow(this);
 }
 
 void CLASViewerDlg::DoDataExchange(CDataExchange* pDX)
@@ -68,6 +71,7 @@ BEGIN_MESSAGE_MAP(CLASViewerDlg, CDialogEx)
 	ON_COMMAND(ID_FILE_OPEN, &CLASViewerDlg::OnFileOpen)
 	ON_MESSAGE(WM_LOADING_COMPLETED, &CLASViewerDlg::OnLoadingCompleted)
 	ON_MESSAGE(WM_LOADING_UPDATED, &CLASViewerDlg::OnProgressUpdated)
+	ON_MESSAGE(WM_LOADING_CANCLED, &CLASViewerDlg::OnLoadingCancled)
 END_MESSAGE_MAP()
 
 void CLASViewerDlg::OnFileOpen()
@@ -91,15 +95,32 @@ void CLASViewerDlg::OnFileOpen()
 void CLASViewerDlg::LoadLasPointsInBackground(const CString& filePath)
 {
 	if (m_Render) {
-		m_wndProgress.SetPos(0);           // Initialize progress bar to 0%
-		// Start the background thread to load points
-		std::thread loadThread([this, filePath]() {
-			m_Render->LoadLasPoints(filePath);
-			// Post message to the dialog when loading is complete
-			PostMessage(WM_LOADING_COMPLETED);
-		});
+		// Show loading dialog and reset progress
+		m_LoadingDlg->ShowWindow(SW_SHOW);
+		m_LoadingDlg->SetProgress(0);
 
-		loadThread.detach();  // Detach the thread so it runs independently
+		// Set the flag to true to indicate the thread should keep running
+		m_bThreadRunning = true;
+
+		// Start the background thread
+		m_loadThread = std::thread([this, filePath]() {
+			try {
+				// Perform the actual task: loading points from the file
+				m_Render->LoadLasPoints(filePath);
+
+				// If the thread finishes successfully, post the completion message
+				if (m_bThreadRunning) {
+					PostMessage(WM_LOADING_COMPLETED);
+				}
+			}
+			catch (const std::exception& e) {
+				// Handle any exceptions that might be thrown during LoadLasPoints
+				PostMessage(WM_LOADING_CANCLED);
+				AfxMessageBox(CString(_T("Error: ")) + CString(e.what()));
+			}
+			});
+
+		m_loadThread.detach();  // Detach the thread so it runs independently
 	}
 }
 
@@ -120,15 +141,9 @@ BOOL CLASViewerDlg::OnInitDialog()
 
 	CRect clientRect;
 	GetClientRect(&clientRect);
-	clientRect.bottom -= 20;  // Leave room at the bottom for the status bar
 
 	// Create a custom static control (you can use other controls like CButton, etc.)
 	m_OpenGLControl.Create(_T(""), WS_CHILD | WS_VISIBLE, CRect(0, 0, clientRect.Width(), clientRect.Height()), this, 1000);
-	m_wndProgress.Create(WS_CHILD | WS_VISIBLE | PBS_SMOOTH, CRect(0, clientRect.Height(), clientRect.Width(), clientRect.Height() + 20), this, 1001);
-	m_wndProgress.SetRange(0, 100);    // Set progress bar range (0-100)
-	m_wndProgress.SetPos(0);           // Initialize progress bar to 0%
-
-
 	m_Render = new OpenGLRenderer(m_OpenGLControl.GetSafeHwnd(), clientRect.Width(), clientRect.Height());
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -136,16 +151,36 @@ BOOL CLASViewerDlg::OnInitDialog()
 
 LRESULT CLASViewerDlg::OnLoadingCompleted(WPARAM wParam, LPARAM lParam) {
 	// Handle completion of the loading task (update UI, etc.)
-	m_wndProgress.SetPos(100);
+	m_LoadingDlg->ShowWindow(SW_HIDE);
 	if (m_Render) m_Render->SetupRender();
+	StopLoadingThread();
 	return 0;
 }
 
 // Message handler for the custom WM_PROGRESS_UPDATED message
 LRESULT CLASViewerDlg::OnProgressUpdated(WPARAM wParam, LPARAM lParam) {
 	int progress = (int)wParam;  // Progress is passed as WPARAM
-	m_wndProgress.SetPos(progress);  // Update the progress bar with the new progress value
+
+	m_LoadingDlg->SetProgress(progress);
+
 	return 0;
+}
+
+//Stop Loading Background Thread
+LRESULT CLASViewerDlg::OnLoadingCancled(WPARAM wParam, LPARAM lParam) {
+	m_LoadingDlg->SetProgress(0);
+	StopLoadingThread();
+	return 0;
+}
+
+void CLASViewerDlg::StopLoadingThread()
+{
+	m_bThreadRunning = false;  // Stop the thread by setting the flag to false
+
+	// If the thread is joinable, join it to wait for completion
+	if (m_loadThread.joinable()) {
+		m_loadThread.join();
+	}
 }
 
 void CLASViewerDlg::OnSysCommand(UINT nID, LPARAM lParam)

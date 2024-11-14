@@ -17,6 +17,7 @@
 
 #define WM_LOADING_COMPLETED (WM_USER + 1) 
 #define WM_LOADING_UPDATED (WM_USER + 2) 
+#define WM_LOADING_CANCLED (WM_USER + 3)
 
 class OpenGLRenderer
 {

@@ -1,5 +1,6 @@
 #pragma once
 #include "OpenGLRenderer.h"
+#include "LoadingDialog.h"
 
 #include <iostream>
 #include <thread>
@@ -28,7 +29,13 @@ protected:
     CMenu m_Menu; // Declare a CMenu object
 
 	CStatic m_OpenGLControl; // Custom control for OpenGL rendering
-	CProgressCtrl m_wndProgress;   // Progress bar control
+
+	LoadingDialog* m_LoadingDlg;
+
+	// Thread Relative
+	std::atomic<bool> m_bThreadRunning;  // Atomic flag to manage thread execution
+	std::thread m_loadThread;            // The background thread
+	void CLASViewerDlg::StopLoadingThread();
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();
@@ -42,6 +49,7 @@ protected:
     afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
 	afx_msg LRESULT OnLoadingCompleted(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnProgressUpdated(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnLoadingCancled(WPARAM wParam, LPARAM lParam);
 
     // Menu command handlers
     afx_msg void OnFileOpen();
