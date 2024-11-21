@@ -6,6 +6,9 @@
 #las files
 *.las
 
+#dependencies
+LASViewer/3rdParty/
+
 # User-specific files
 *.rsuser
 *.suo

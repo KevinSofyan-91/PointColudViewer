@@ -23,7 +23,7 @@
     <ProjectGuid>{91C292CD-E22C-4CEA-8309-96BC84CA5A33}</ProjectGuid>
     <Keyword>MFCProj</Keyword>
     <RootNamespace>LASViewer</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -87,8 +87,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\lib\laszip;.\lib\laslib;$(IncludePath)</IncludePath>
-    <LibraryPath>.\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>.\3rdParty\Boost\include\boost-1_84;.\3rdParty\Eigen3\include\eigen3;.\3rdParty\FLANN\include;.\3rdParty\Laslib\include;.\3rdParty\Laszip\include;.\3rdParty\Qhull\include;.\3rdParty\VTK\include;.\3rdParty\PCL\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\3rdParty\Boost\lib;.\3rdParty\FLANN\lib;.\3rdParty\Laslib\lib;.\3rdParty\Laszip\lib;.\3rdParty\PCL\lib;.\3rdParty\Qhull\lib;.\3rdParty\VTK\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

@@ -7,6 +7,11 @@
 #include <atomic>
 #include <mutex>
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
+
 // CLASViewerDlg dialog
 class CLASViewerDlg : public CDialogEx
 {
