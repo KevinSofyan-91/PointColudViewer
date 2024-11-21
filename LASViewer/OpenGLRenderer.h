@@ -9,6 +9,9 @@
 #include "Dataset_Utils.h"
 #include "Camera_Utils.h"
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 #define POINTSIZE	1.5f
 #define VSYNC		1
 
@@ -49,7 +52,7 @@ private:
     HDC m_hDC;
     HGLRC m_hRC;
 
-    std::vector<Point_Infos> pointsInfo;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointsInfo;
 
     //Utils Variable
     DatasetUtils dataUtils;

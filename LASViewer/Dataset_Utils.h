@@ -8,6 +8,9 @@
 
 #include "lasreader.hpp"
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 #define BATCH_SIZE 1000
 
 struct Point_Infos
@@ -35,8 +38,8 @@ struct Point_Infos
 class DatasetUtils
 {
 public:
-	std::vector <Point_Infos> readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback);
-	std::vector <float> getCoordinates(std::vector <Point_Infos>);
-	std::vector <float> getPointsColor(std::vector <Point_Infos>);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback);
+	std::vector <float> getCoordinates(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
+	std::vector <float> getPointsColor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
 };
 
