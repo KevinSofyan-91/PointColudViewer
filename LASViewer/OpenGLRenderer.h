@@ -11,6 +11,7 @@
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/kdtree/kdtree_flann.h>
 
 #define POINTSIZE	1.5f
 #define VSYNC		1
@@ -46,12 +47,18 @@ private:
     void CleanupBuffers();
     void initalizeValues();
     void PostUpdateMessageToUIThread(int progress);
+    void GetGlobalCoordinate(int mouseX, int mouseY);
+    void FiandAndSelectNearPoints(float x, float y, float z);
 
 
     HWND m_hWnd;
     HDC m_hDC;
     HGLRC m_hRC;
 
+    float x_offset, y_offset, z_offset;
+    float x_scale, y_scale, z_scale;
+
+    pcl::KdTreeFLANN<pcl::PointXYZRGB> pointKdTree;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointsInfo;
 
     //Utils Variable
@@ -74,6 +81,7 @@ private:
     glm::vec3 cameraPosition;
     glm::vec3 cameraTarget;
     glm::vec3 cameraUp;
+    bool cameraLoad;
 
     float yaw, pitch, radius;
     float sensitivity;
@@ -83,6 +91,7 @@ private:
     float lastX, lastY;
     bool firstMouse;
     bool isLeftMouseButtonDown;
+    GLdouble globalX, globalY, globalZ;
 
     int width, height;
     glm::mat4 mvp;

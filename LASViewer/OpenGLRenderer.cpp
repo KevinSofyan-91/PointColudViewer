@@ -1,12 +1,19 @@
 #include "pch.h"
 #include "OpenGLRenderer.h"
 
+#include <GL\glew.h>
+#include "glm/gtx/transform.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include <glm/gtc/type_ptr.hpp>
+#include "glm/glm.hpp"
+
 OpenGLRenderer::OpenGLRenderer(HWND hWnd, int width, int height)
     : m_hWnd(hWnd), width(width), height(height), cameraPosition(0.0f, 0.0f, 0.0f),
     cameraTarget(0.0f, 0.0f, 0.0f), cameraUp(0.0f, 1.0f, 0.0f), yaw(-90.0f), pitch(0.0f),
     radius(500.0f), sensitivity(1.0f), zoomSpeed(10.0f), currentLOD(1), prevLOD(1),
     lastX(static_cast<float>(width) / 2.0f), lastY(static_cast<float>(height) / 2.0f),
-    firstMouse(true), isLeftMouseButtonDown(false)
+    firstMouse(true), isLeftMouseButtonDown(false), x_offset(0.0f), y_offset(0.0f), z_offset(0.0f),
+    x_scale(1.0f), y_scale(1.0f), z_scale(1.0f), cameraLoad(false)
 {
     // Get device context (DC) for the window to render OpenGL
     m_hDC = ::GetDC(hWnd);
@@ -115,16 +122,32 @@ void OpenGLRenderer::LoadLasPoints(const CString& filePath)
         return;
     }
 
+    cameraLoad = false;
+
+    //Get header factor
+    x_offset = lasreader->header.x_offset;
+    y_offset = lasreader->header.y_offset;
+    z_offset = lasreader->header.z_offset;
+
+    x_scale = lasreader->header.x_scale_factor;
+    y_scale = lasreader->header.y_scale_factor;
+    z_scale = lasreader->header.z_scale_factor;
+
     // Process the point cloud data...
     pointsInfo = dataUtils.readPointsInfofromLas(lasreader, [this](int progress) {
         PostUpdateMessageToUIThread(progress);
         return 0;  // Make sure to return an int as expected by the callback signature
     });
+
+    pointKdTree.setInputCloud(pointsInfo);
+
     vertex_position_data = dataUtils.getCoordinates(pointsInfo);
     vertex_color_data = dataUtils.getPointsColor(pointsInfo);
 
     cameraPosition = cameraUtils.getInitalCameraPosition(lasreader->header);
     cameraTarget = cameraUtils.getInitalCameraTarget(lasreader->header);
+
+    cameraLoad = true;
 }
 
 // Function to send points to the main thread via PostMessage
@@ -178,7 +201,7 @@ void OpenGLRenderer::RenderScene()
     glBindVertexArray(vao);
 
     // Ensure positions and colors are uploaded to the GPU once (only on data changes or first load)
-    if (currentLOD != prevLOD) {
+    //if (currentLOD != prevLOD) {
         size_t step = currentLOD;
         lodVertices.clear();
         lodColors.clear();
@@ -208,7 +231,7 @@ void OpenGLRenderer::RenderScene()
 
         // Update the previous LOD
         prevLOD = currentLOD;
-    }
+   // }
 
     // Draw the current LOD
     glDrawArrays(GL_POINTS, 0, lodVertices.size() / 3);
@@ -231,7 +254,7 @@ void OpenGLRenderer::UpdateCameraDirection()
     cameraPosition.y = cameraTarget.y + radius * sin(pitchRad);
     cameraPosition.z = cameraTarget.z + radius * sin(yawRad) * cos(pitchRad);
     UpdateLod();
-    mvp = cameraUtils.computeInitialMVP_Matrix(cameraPosition, cameraTarget, cameraUp, width / height);
+    mvp = cameraUtils.computeInitialMVP_Matrix(cameraPosition, cameraTarget, cameraUp, static_cast<float>(width) / static_cast<float>(height));
     RenderScene();
 }
 
@@ -262,9 +285,73 @@ void OpenGLRenderer::OnResize(int newWidth, int newHeight)
     glMatrixMode(GL_MODELVIEW);
 }
 
+void OpenGLRenderer::FiandAndSelectNearPoints(float x, float y, float z) {
+    pcl::PointXYZRGB searchPoint;
+    searchPoint.x = x;  // World coordinates from mouse
+    searchPoint.y = y;
+    searchPoint.z = z;
+
+    std::vector<int> pointIdxRadiusSearch;
+    std::vector<float> pointRadiusSquaredDistance;
+    float radius = 5.0f;  // Adjust search radius
+
+    if (pointKdTree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
+        // Update colors of searched points
+       // Update only the colors of the points found in the search
+        for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+            int idx = pointIdxRadiusSearch[i];
+            int colorOffset = idx * 3 * sizeof(GLfloat); // Offset in bytes
+
+            // Set the new color in the vertex_color_data array
+            vertex_color_data[idx * 3 + 0] = 1.0f; // R
+            vertex_color_data[idx * 3 + 1] = 0.0f; // G
+            vertex_color_data[idx * 3 + 2] = 0.0f; // B
+        }
+
+        RenderScene();
+    }
+}
+
+void OpenGLRenderer::GetGlobalCoordinate(int mouseX, int mouseY) {
+    if (!cameraLoad) return;
+
+    // Get the viewport
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport); // This gets the window size: [x, y, width, height]
+
+    // Read the depth buffer to get the winZ (depth at the mouse position)
+    float winZ;
+    glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ);
+
+    // Get the modelview, projection matrices from glm
+    float aspect = static_cast<float>(width) / static_cast<float>(height);
+
+    glm::mat4 projection = glm::perspective(glm::radians(45.f), aspect, 0.1f, 10000.f);
+    glm::mat4 modelview = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
+
+    // Prepare GLdouble arrays to hold the matrix data
+    GLdouble modelviewGL[16];
+    GLdouble projectionGL[16];
+
+    // Copy the glm matrix data into the GLdouble arrays
+    for (int i = 0; i < 16; ++i) {
+        modelviewGL[i] = static_cast<GLdouble>(modelview[i / 4][i % 4]);
+        projectionGL[i] = static_cast<GLdouble>(projection[i / 4][i % 4]);
+    }
+
+    // Use gluUnProject to get the world coordinates from screen-space coordinates (mouse)
+    gluUnProject(mouseX, viewport[3] - mouseY, winZ, modelviewGL, projectionGL, viewport, &globalX, &globalY, &globalZ);
+
+   /* globalX = (globalX - x_offset) / x_scale;
+    globalY = (globalY - y_offset) / y_scale;
+    globalZ = (globalZ - z_offset) / z_scale;*/
+
+    FiandAndSelectNearPoints(globalX, globalY, globalZ);
+}
+
 void OpenGLRenderer::OnMouseMove(int x, int y)
 {
-
+    GetGlobalCoordinate(x, y);
     // Implement camera movement based on mouse
     if (!isLeftMouseButtonDown) return; // Only process if left mouse button is down
 
