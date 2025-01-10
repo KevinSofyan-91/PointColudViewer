@@ -1,3 +1,4 @@
+
 #include "pch.h"
 #include "Dataset_Utils.h"
 #include "iostream"
@@ -5,25 +6,27 @@
 using namespace std;
 
 /* Reads the point cloud dataset and saves to a vector struct */
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr DatasetUtils::readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback)
+pcl::PointCloud<pcl::PointXYZRGB> DatasetUtils::readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback)
 {
+	pcl::PointCloud<pcl::PointXYZRGB> pointVector;
+	pcl::PointCloud<pcl::PointXYZRGB> tempVector;
+	pcl::VoxelGrid<pcl::PointXYZRGB> vg;
+
+	// Set the leaf size (downsampling resolution)
+	vg.setLeafSize(1.0f, 1.0f, 1.0f); // Set voxel grid size to 1x1x1
+
 	float x, y, z, red, green, blue;
 
-	LASheader header = lasreader->header;
-
-	size_t totalPoints = header.number_of_point_records;
+	size_t totalPoints = lasreader->header.number_of_point_records;
 	size_t batch = 0, batchIndex = 0;
-
-	// Create a PCL point cloud
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointVector(new pcl::PointCloud<pcl::PointXYZRGB>);
 
 	// Read and process the LAS file
 	while (lasreader->read_point()) {
 		// Access the point data
 		LASpoint point = lasreader->point;
-		x = point.X * header.x_scale_factor + header.x_offset;
-		y = point.Y * header.y_scale_factor + header.y_offset;
-		z = point.Z * header.z_scale_factor + header.z_offset;
+		x = point.X * lasreader->header.x_scale_factor + lasreader->header.x_offset;
+		y = point.Y * lasreader->header.y_scale_factor + lasreader->header.y_offset;
+		z = point.Z * lasreader->header.z_scale_factor + lasreader->header.z_offset;
 		red = point.rgb[0];
 		green = point.rgb[1];
 		blue = point.rgb[2];
@@ -33,6 +36,16 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr DatasetUtils::readPointsInfofromLas(LASre
 			batch++;
 			batchIndex = 0;
 			batchCallback(static_cast<int>(100.0 / totalPoints * batch * BATCH_SIZE));
+
+			// Apply the voxel grid filter
+			vg.setInputCloud(tempVector.makeShared());
+			vg.filter(tempVector);
+
+			// Append the filtered points to pointVector
+			pointVector.insert(pointVector.end(), tempVector.points.begin(), tempVector.points.end());
+
+			// Clear the tempVector for the next cycle (if needed)
+			tempVector.clear();
 		}
 
 		// Create a PCL point and set the RGB values
@@ -45,7 +58,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr DatasetUtils::readPointsInfofromLas(LASre
 		pcl_point.b = static_cast<uint8_t>(blue / 65535.0f * 255);
 
 		// Add the point to the cloud
-		pointVector->points.push_back(pcl_point);
+		tempVector.points.push_back(pcl_point);
 	}
 
 	return pointVector;

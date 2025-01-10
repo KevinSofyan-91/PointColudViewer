@@ -76,8 +76,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>.\lib\laszip;.\lib\laslib;$(IncludePath)</IncludePath>
-    <LibraryPath>.\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>.\3rdParty\Boost\include\boost-1_84;.\3rdParty\Eigen3\include\eigen3;.\3rdParty\FLANN\include;.\3rdParty\Laslib\include;.\3rdParty\Laszip\include;.\3rdParty\PCL\include;.\3rdParty\Qhull\include;.\3rdParty\VTK\include;.\3rdParty\GLEW\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\3rdParty\Boost\lib;.\3rdParty\FLANN\lib;.\3rdParty\Laslib\lib;.\3rdParty\Laszip\lib;.\3rdParty\PCL\lib;.\3rdParty\Qhull\lib;.\3rdParty\VTK\lib;.\3rdParty\GLEW\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -87,8 +87,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\3rdParty\Boost\include\boost-1_84;.\3rdParty\Eigen3\include\eigen3;.\3rdParty\FLANN\include;.\3rdParty\Laslib\include;.\3rdParty\Laszip\include;.\3rdParty\Qhull\include;.\3rdParty\VTK\include;.\3rdParty\PCL\include;$(IncludePath)</IncludePath>
-    <LibraryPath>.\3rdParty\Boost\lib;.\3rdParty\FLANN\lib;.\3rdParty\Laslib\lib;.\3rdParty\Laszip\lib;.\3rdParty\PCL\lib;.\3rdParty\Qhull\lib;.\3rdParty\VTK\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>.\3rdParty\Boost\include\boost-1_84;.\3rdParty\Eigen3\include\eigen3;.\3rdParty\FLANN\include;.\3rdParty\Laslib\include;.\3rdParty\Laszip\include;.\3rdParty\Qhull\include;.\3rdParty\VTK\include;.\3rdParty\PCL\include;.\3rdParty\GLEW\include;$(IncludePath)</IncludePath>
+    <LibraryPath>.\3rdParty\Boost\lib;.\3rdParty\FLANN\lib;.\3rdParty\Laslib\lib;.\3rdParty\Laszip\lib;.\3rdParty\PCL\lib;.\3rdParty\Qhull\lib;.\3rdParty\VTK\lib;.\3rdParty\GLEW\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -97,10 +97,11 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>opengl32.lib;glu32.lib;glfw3.lib;glew32s.lib;laslib64.lib;laszip64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;glew32.lib;laslib64.lib;laszip64.lib;pcl_common.lib;pcl_io.lib;pcl_kdtree.lib;pcl_search.lib;pcl_segmentation.lib;pcl_features.lib;pcl_surface.lib;pcl_filters.lib;vtklibproj-9.3.lib;libboost_system-vc143-mt-x64-1_84.lib;libboost_filesystem-vc143-mt-x64-1_84.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -175,7 +176,7 @@
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glu32.lib;glfw3.lib;glew32.lib;laslib64.lib;laszip64.lib;pcl_kdtree.lib;flann_cpp_s.lib;pcl_io.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;glew32.lib;laslib64.lib;laszip64.lib;pcl_common.lib;pcl_io.lib;pcl_kdtree.lib;pcl_search.lib;pcl_segmentation.lib;pcl_features.lib;pcl_surface.lib;pcl_filters.lib;vtklibproj-9.3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -224,7 +225,21 @@
     <None Include="res\LASViewer.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="menu.bmp" />
+    <Image Include="res\bitmap1.bmp" />
+    <Image Include="res\bitmap2.bmp" />
+    <Image Include="res\bitmap3.bmp" />
+    <Image Include="res\bmp00001.bmp" />
+    <Image Include="res\color.png" />
+    <Image Include="res\fileopen.png" />
     <Image Include="res\LASViewer.ico" />
+    <Image Include="res\measure.bmp" />
+    <Image Include="res\menu.bmp" />
+    <Image Include="res\png1.png" />
+    <Image Include="res\rgb.bmp" />
+    <Image Include="res\toolbar.bmp" />
+    <Image Include="res\toolbar.png" />
+    <Image Include="res\toolbar1.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -7,10 +7,6 @@
 #include <atomic>
 #include <mutex>
 
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/voxel_grid.h>
 
 // CLASViewerDlg dialog
 class CLASViewerDlg : public CDialogEx
@@ -31,7 +27,8 @@ public:
 // Implementation
 protected:
 	HICON m_hIcon;
-    CMenu m_Menu; // Declare a CMenu object
+	CMFCToolBar m_ToolBar, m_MeasureToolBar;
+	CTabCtrl m_TabCtrl;
 
 	CStatic m_OpenGLControl; // Custom control for OpenGL rendering
 
@@ -41,6 +38,10 @@ protected:
 	std::atomic<bool> m_bThreadRunning;  // Atomic flag to manage thread execution
 	std::thread m_loadThread;            // The background thread
 	void CLASViewerDlg::StopLoadingThread();
+
+	//For Line, Volume Calculation
+	LINE lineDraw;
+	bool lineFlag;
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();
@@ -55,9 +56,24 @@ protected:
 	afx_msg LRESULT OnLoadingCompleted(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnProgressUpdated(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnLoadingCancled(WPARAM wParam, LPARAM lParam);
+	afx_msg void OnTabSelectionChange(NMHDR* pNMHDR, LRESULT* pResult);
 
     // Menu command handlers
     afx_msg void OnFileOpen();
+	afx_msg void OnRGBFilterClick();
+	afx_msg void OnPointSizeClick();
+	afx_msg void OnPoint1Click();
+	afx_msg void OnPoint2Click();
+	afx_msg void OnPoint3Click();
+	afx_msg void OnPoint4Click();
+	afx_msg void OnPoint5Click();
+	afx_msg void OnPolyMeshClick();
+	afx_msg void OnSaveDFXClick();
+	afx_msg void OnSaveSFCClick();
+	afx_msg void OnCrossHorizontalClick();
+	afx_msg void OnCrossVerticalClick();
+	afx_msg void OnShowGround();
+	afx_msg void OnFreeLineSelected();
 
 	DECLARE_MESSAGE_MAP()
 

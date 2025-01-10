@@ -31,7 +31,7 @@ void LoadingDialog::OnClose()
 
     if (pParent != nullptr)
     {
-        pParent->PostMessage(WM_LOADING_CANCLED);
+        //pParent->PostMessage(WM_LOADING_CANCLED);
     }
 
     CDialogEx::OnClose();

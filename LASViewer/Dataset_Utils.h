@@ -8,10 +8,27 @@
 
 #include "lasreader.hpp"
 
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
+#include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-#define BATCH_SIZE 1000
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/ModelCoefficients.h>
+
+#include <pcl/features/normal_3d.h>
+
+#include <pcl/surface/gp3.h>
+#include <pcl/point_types.h>
+#include <pcl/search/kdtree.h>
+
+#include "vtk-9.3/vtklibproj/src/proj.h"
+
+#define BATCH_SIZE 100000
 
 struct Point_Infos
 {
@@ -38,8 +55,7 @@ struct Point_Infos
 class DatasetUtils
 {
 public:
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback);
+	pcl::PointCloud<pcl::PointXYZRGB> readPointsInfofromLas(LASreader*& lasreader, std::function<int(int)> batchCallback);
 	std::vector <float> getCoordinates(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
 	std::vector <float> getPointsColor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr);
 };
-
