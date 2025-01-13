@@ -87,7 +87,9 @@ public:
     void SetPointSize(int size);
 
 private:
-    bool ground_flag;
+    //Flags for Drawing.
+    int cross_type;
+    bool f_mesh, f_cross, f_ground, f_point;
 
     HWND m_hWnd;
     HDC m_hDC;

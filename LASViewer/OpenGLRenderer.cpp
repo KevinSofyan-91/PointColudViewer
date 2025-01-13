@@ -10,7 +10,8 @@ OpenGLRenderer::OpenGLRenderer(HWND hWnd, int width, int height)
     roll(0.0f), sensitivity(0.1f), radius(10.0f), baseResolution(0.0f), initialDistance(0.0f),
     lastX(static_cast<float>(width) / 2.0f), lastY(static_cast<float>(height) / 2.0f),
     firstMouse(true), isLeftMouseButtonDown(false), x_offset(0.0f), y_offset(0.0f), z_offset(0.0f),
-    x_scale(1.0f), y_scale(1.0f), z_scale(1.0f), cameraLoad(false), ground_flag(false), gp3((new pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal>()))
+    x_scale(1.0f), y_scale(1.0f), z_scale(1.0f), cameraLoad(false), f_mesh(false), f_cross(false), f_ground(false), 
+    f_point(true), cross_type(-1), gp3((new pcl::GreedyProjectionTriangulation<pcl::PointXYZRGBNormal>()))
 {
     // Get device context (DC) for the window to render OpenGL
     m_hDC = ::GetDC(hWnd);
@@ -114,6 +115,15 @@ void OpenGLRenderer::LoadShaders()
 }
 
 void OpenGLRenderer::ShowCrossSection(int type) {
+    if (cross_type != type) f_cross = true;
+    else f_cross = !f_cross;
+    if (f_cross) f_point = false;
+    else f_point = true;
+    f_ground = false;
+    f_mesh = false;
+
+    cross_type = type;
+
     cross_vertices.clear();
     cross_color.clear();
 
@@ -158,7 +168,11 @@ void OpenGLRenderer::ShowGround() {
     ground_vertices.clear();
     ground_color.clear();
 
-    ground_flag = !ground_flag;
+    if (f_ground) f_point = true;
+    else f_point = false;
+    f_mesh = false;
+    f_cross = false;
+    f_ground = !f_ground;
 
     pcl::SACSegmentation<pcl::PointXYZRGB> seg;
     auto coefficients = std::make_shared<pcl::ModelCoefficients>();
@@ -368,6 +382,12 @@ float OpenGLRenderer::getPointCloudDensity() {
 void OpenGLRenderer::ProcessTriangleMesh() {
     try
     {
+        if (f_mesh) f_point = true;
+        else f_point = false;
+        f_ground = false;
+        f_cross = false;
+        f_mesh = !f_mesh;
+
         pcl::PointCloud<pcl::PointXYZRGB> colored_cloud = pointsInfo;
 
         mesh.polygons.clear();
@@ -481,7 +501,7 @@ void OpenGLRenderer::ProcessTriangleMesh() {
 void OpenGLRenderer::LoadLasPoints(const CString& filePath)
 {
     try {
-        ground_flag = false;
+        f_ground = false;
 
         LASreadOpener lasOpener;
 
@@ -601,7 +621,6 @@ void OpenGLRenderer::PostUpdateMessageToUIThread(int progress) {
     }
 }
 
-
 void OpenGLRenderer::SetupRender() {
     //Clear all data for new render
     CleanupBuffers();
@@ -633,7 +652,7 @@ void OpenGLRenderer::RenderScene()
 
     glBindVertexArray(vao);
 
-    if (ground_flag) {
+    if (f_ground) {
         // Set up the position buffer (upload data only when LOD changes)
         glBindBuffer(GL_ARRAY_BUFFER, vboGroundPos);
         glBufferData(GL_ARRAY_BUFFER, ground_vertices.size() * sizeof(GLfloat), ground_vertices.data(), GL_STATIC_DRAW);
@@ -649,7 +668,7 @@ void OpenGLRenderer::RenderScene()
         // Draw the current LOD
         glDrawArrays(GL_POINTS, 0, ground_vertices.size() / 3);
     }
-    else {
+    if(f_point) {
         // Set up the position buffer (upload data only when LOD changes)
         glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
         glBufferData(GL_ARRAY_BUFFER, lodVertices.size() * sizeof(GLfloat), lodVertices.data(), GL_STATIC_DRAW);
@@ -667,52 +686,56 @@ void OpenGLRenderer::RenderScene()
 
     }
 
-    // Set up the position buffer (upload data only when LOD changes)
-    glBindBuffer(GL_ARRAY_BUFFER, vboCrossPos);
-    glBufferData(GL_ARRAY_BUFFER, cross_vertices.size() * sizeof(GLfloat), cross_vertices.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
-    glEnableVertexAttribArray(0);
+    if (f_cross) {
+        // Set up the position buffer (upload data only when LOD changes)
+        glBindBuffer(GL_ARRAY_BUFFER, vboCrossPos);
+        glBufferData(GL_ARRAY_BUFFER, cross_vertices.size() * sizeof(GLfloat), cross_vertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
+        glEnableVertexAttribArray(0);
 
-    // Set up the color buffer (upload data only when LOD changes)
-    glBindBuffer(GL_ARRAY_BUFFER, vboCrossColor);
-    glBufferData(GL_ARRAY_BUFFER, cross_color.size() * sizeof(GLfloat), cross_color.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
-    glEnableVertexAttribArray(1);
+        // Set up the color buffer (upload data only when LOD changes)
+        glBindBuffer(GL_ARRAY_BUFFER, vboCrossColor);
+        glBufferData(GL_ARRAY_BUFFER, cross_color.size() * sizeof(GLfloat), cross_color.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
+        glEnableVertexAttribArray(1);
 
-    glDrawArrays(GL_POINTS, 0, cross_vertices.size() / 3);
-
-    // Upload vertex data
-    glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-    glBufferData(GL_ARRAY_BUFFER, mesh_vertices.size() * sizeof(GLfloat), mesh_vertices.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-    glBufferData(GL_ARRAY_BUFFER, mesh_colors.size() * sizeof(GLfloat), mesh_colors.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
-    glEnableVertexAttribArray(1);
-
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh_indices.size() * sizeof(GLuint), mesh_indices.data(), GL_STATIC_DRAW);
-
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDrawElements(GL_TRIANGLES, mesh_indices.size(), GL_UNSIGNED_INT, 0);
-
-    glColor3f(1.0f, 0.0f, 0.0f);
-    for (int i = 0; i < lines.size(); i++){
-        LINE line = lines[i];
-        if (line.type == 1) {
-            Point first = GetGlobalCoordinate(line.x1, line.y1);
-            Point second = GetGlobalCoordinate(line.x2, line.y2);
-            glBegin(GL_LINES);
-
-            glVertex2f(first.x, first.y);  // Start point of the line
-            glVertex2f(second.x, second.y);  // End point of the line
-            glEnd();
-        }
+        glDrawArrays(GL_POINTS, 0, cross_vertices.size() / 3);
     }
+
+    if (f_mesh) {
+        // Upload vertex data
+        glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
+        glBufferData(GL_ARRAY_BUFFER, mesh_vertices.size() * sizeof(GLfloat), mesh_vertices.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Position
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vboColors);
+        glBufferData(GL_ARRAY_BUFFER, mesh_colors.size() * sizeof(GLfloat), mesh_colors.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0); // Color
+        glEnableVertexAttribArray(1);
+
+        glGenBuffers(1, &ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh_indices.size() * sizeof(GLuint), mesh_indices.data(), GL_STATIC_DRAW);
+
+        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDrawElements(GL_TRIANGLES, mesh_indices.size(), GL_UNSIGNED_INT, 0);
+    }
+
+    //glColor3f(1.0f, 0.0f, 0.0f);
+    //for (int i = 0; i < lines.size(); i++){
+    //    LINE line = lines[i];
+    //    if (line.type == 1) {
+    //        Point first = GetGlobalCoordinate(line.x1, line.y1);
+    //        Point second = GetGlobalCoordinate(line.x2, line.y2);
+    //        glBegin(GL_LINES);
+
+    //        glVertex2f(first.x, first.y);  // Start point of the line
+    //        glVertex2f(second.x, second.y);  // End point of the line
+    //        glEnd();
+    //    }
+    //}
 
     // Unbind VAO
     glBindBuffer(GL_ARRAY_BUFFER, 0);

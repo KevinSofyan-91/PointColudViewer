@@ -93,8 +93,8 @@ END_MESSAGE_MAP()
 
 void CLASViewerDlg::OnFileOpen()
 {
-	// Set up the file filter for .las files
-	CString fileFilter = _T("LAS Files (*.las)|*.las|All Files (*.*)|*.*||");
+	// Set up the file filter for .las and .laz files
+	CString fileFilter = _T("LAS/LAZ Files (*.las;*.laz)|*.las;*.laz|All Files (*.*)|*.*||");
 
 	// Create the File Open dialog
 	CFileDialog fileDialog(TRUE, _T(".las"), NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, fileFilter, this);
@@ -274,12 +274,12 @@ BOOL CLASViewerDlg::OnInitDialog()
 	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
 
 	// Create the toolbar
-	if (!m_ToolBar.Create(this, AFX_DEFAULT_TOOLBAR_STYLE, IDR_MAINFRAME))  // Use the resource ID of the toolbar
+	if (!m_ToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP))  // Use the resource ID of the toolbar
 	{
 		TRACE0("Failed to create toolbar\n");
 		return FALSE;  // Failure
 	}
-	if (!m_MeasureToolBar.Create(this, AFX_DEFAULT_TOOLBAR_STYLE, IDR_MAINFRAME))  // Use the resource ID of the toolbar
+	if (!m_MeasureToolBar.CreateEx(this, TBSTYLE_FLAT, WS_CHILD | WS_VISIBLE | CBRS_TOP))  // Use the resource ID of the toolbar
 	{
 		TRACE0("Failed to create toolbar\n");
 		return FALSE;  // Failure

@@ -75,6 +75,7 @@ protected:
 	afx_msg void OnShowGround();
 	afx_msg void OnFreeLineSelected();
 
+
 	DECLARE_MESSAGE_MAP()
 
 private:
